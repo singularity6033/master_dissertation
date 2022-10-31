@@ -8,7 +8,7 @@ from utils.utils import get_classes
 classes_path = os.path.join(config.VOC_ORIG_BASE_PATH, 'voc_classes.txt')
 trainval_percent = 0.9
 train_percent = 0.9
-VOCdevkit_path = config.VOC_ORIG_BASE_PATH
+VOCdevkit_path = config.COCO_ORIG_BASE_PATH
 VOCdevkit_sets = [('2012', 'train'), ('2012', 'val')]
 classes, _ = get_classes(classes_path)
 

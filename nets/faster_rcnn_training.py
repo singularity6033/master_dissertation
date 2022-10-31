@@ -191,7 +191,6 @@ class ProposalTargetCreator(object):
                 neg_index = np.random.choice(neg_index, size=neg_roi_per_this_image, replace=False)
                 # print('neg_index: ', neg_index.shape)
         else:
-            # if we do not have any negative regions, just replace with zeros
             neg_index = np.zeros(neg_roi_per_this_image, dtype=int)
         # sample_roi      [n_sample, ]
         # gt_roi_loc      [n_sample, 4]

@@ -99,15 +99,35 @@ def main(map_out_path, model_path, weights_path, chop_idx, stride, out_channel):
 
 if __name__ == '__main__':
     # map result dir
-    b_map_out_path = './vgg16_cifar100_fpl_tf2/logs_frcnn_voc'
-    b_model_path = './vgg16_cifar100_fpl_tf2/model'
-    b_weights_path = './vgg16_cifar100_fpl_tf2/logs_frcnn_voc'
-    wn = ['ep050-loss1.963-val_loss1.770.h5', 'ep050-loss1.867-val_loss1.637.h5', 'ep050-loss1.737-val_loss1.553.h5']
+    b_map_out_path = './vgg16_cifar10_fpl_tf2/logs_frcnn_voc'
+    b_model_path = './vgg16_cifar10_fpl_tf2/model'
+    b_weights_path = './vgg16_cifar10_fpl_tf2/logs_frcnn_voc'
+    wn = ['ep200-loss2.426-val_loss2.198.h5', 'ep050-loss2.472-val_loss2.173.h5', 'ep050-loss2.182-val_loss1.905.h5',
+          'ep050-loss2.389-val_loss2.160.h5', 'ep050-loss2.875-val_loss2.977.h5', 'ep050-loss2.778-val_loss2.843.h5',
+          'ep050-loss2.887-val_loss2.960.h5', 'ep050-loss2.781-val_loss2.941.h5', 'ep050-loss2.989-val_loss3.198.h5',
+          'ep050-loss2.773-val_loss2.952.h5']
+
     ci = [-4, -5, -4, -5, -4, -4, -5, -4, -4, -5, -4, -4, -5]
     st = [1, 1, 2, 2, 4, 4, 4, 8, 8, 8, 16, 16, 16]
     oc = [64, 64, 128, 128, 256, 256, 256, 512, 512, 512, 512, 512, 512]
-    for i in range(3):
+    for i in range(5, 6):
         mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result'])
         mp = os.path.sep.join([b_model_path, 's' + str(i + 1) + '_' + str(ci[i]) + '.json'])
-        wp = os.path.sep.join([b_weights_path, 'w' + str(i + 1), wn[i]])
+        wp = os.path.sep.join([b_weights_path, 'w' + str(i + 1), wn[i - 5]])
         main(mop, mp, wp, ci[i], st[i], oc[i])
+
+    # b_map_out_path = './sgd_tf2/logs_frcnn_voc/vgg16_cifar10'
+    # b_model_path = './sgd_tf2/model'
+    #
+    # mop = os.path.sep.join([b_map_out_path, 'map_result'])
+    # mp = os.path.sep.join([b_model_path, 'sgd_vgg16_cifar10_-11.json'])
+    # wp = os.path.sep.join([b_map_out_path, 'ep050-loss1.951-val_loss2.023.h5'])
+    # main(mop, mp, wp, -11, 16, 512)
+
+    # b_map_out_path = './sgd_tf2/logs_frcnn_voc/vgg16_cifar100'
+    # b_model_path = './sgd_tf2/model'
+    #
+    # mop = os.path.sep.join([b_map_out_path, 'map_result'])
+    # mp = os.path.sep.join([b_model_path, 'sgd_vgg16_cifar100_-11.json'])
+    # wp = os.path.sep.join([b_map_out_path, 'ep050-loss1.960-val_loss2.066.h5'])
+    # main(mop, mp, wp, -11, 16, 512)

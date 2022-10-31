@@ -1,12 +1,12 @@
 import os
-import cv2
+import shutil
 import xml.etree.ElementTree as ET
 import numpy as np
 from PIL import Image
 from tensorflow.python.keras.models import model_from_json
 from tqdm import tqdm
 from utils import config
-from utils.nms import non_max_suppression
+from utils.nms import non_max_suppression, cpu_soft_nms
 from utils.utils_generator import ipsw_dataset_generator, ss_dataset_generator
 from utils.utils import get_classes
 from utils.calc_map import get_map
@@ -35,20 +35,17 @@ def main(map_out_path, model_path, weights_path):
                                           "VOC2012/ImageSets/Main/test.txt")).read().strip().split()
 
     # we choose 25% of testing dataset to evaluate our model
-    # test_dataset_path = test_dataset_path[894:]
-    #
+    # test_dataset_path = test_dataset_path[1600:]
+
     voc_image_path = os.path.join(config.VOC_ORIG_BASE_PATH, 'VOC2012/JPEGImages')
     # MINOVERLAP --> mAP0.x
-    MINOVERLAP = 0.05
+    MINOVERLAP = 0.25
     # visualization of map calculations
     map_vis = False
-
-    if not os.path.exists(map_out_path):
-        os.makedirs(map_out_path)
-
     input_shape = [32, 32]
     roi_sizes = [[150, 100], [150, 150], [100, 150]]
-
+    # if os.path.exists(map_out_path):
+    #     shutil.rmtree(map_out_path)
     if not os.path.exists(map_out_path):
         os.makedirs(map_out_path)
     if not os.path.exists(os.path.join(map_out_path, 'ground-truth')):
@@ -59,21 +56,17 @@ def main(map_out_path, model_path, weights_path):
         os.makedirs(os.path.join(map_out_path, 'images-optional'))
 
     if map_mode == 0 or map_mode == 1:
+
         print("Get predict result.")
         for image_path in tqdm(test_dataset_path):
+            input_image = Image.open(os.path.join(voc_image_path, image_path + '.jpg'))
+            if map_vis:
+                input_image.save(os.path.join(map_out_path, "images-optional/" + image_path + ".jpg"))
             if method == 'ipsw':
-                input_image = Image.open(os.path.join(voc_image_path, image_path + '.jpg'))
-                input_size = input_image.size
-                if map_vis:
-                    input_image.save(os.path.join(map_out_path, "images-optional/" + image_path + ".jpg"))
                 rois, locs = ipsw_dataset_generator(input_shape=input_shape, scale=1.5, win_step=16,
                                                     roi_sizes=roi_sizes,
                                                     train=False).test_generator(input_image)
             elif method == 'ss':
-                input_image = cv2.imread(os.path.join(voc_image_path, image_path + '.jpg'))
-                input_size = (input_image.shape[1], input_image.shape[0])
-                if map_vis:
-                    cv2.imwrite(os.path.join(map_out_path, "images-optional/" + image_path + ".jpg"), input_image)
                 rois, locs = ss_dataset_generator(input_shape=input_shape, category=class_names, dataset_name='voc',
                                                   train=False).test_generator(input_image)
             f = open(os.path.join(map_out_path, "detection-results/" + image_path + ".txt"), "w")
@@ -92,7 +85,7 @@ def main(map_out_path, model_path, weights_path):
             for i in range(num_pred):
                 # filter out weak detections by ensuring the predicted probability
                 # is greater than the minimum probability
-                if label_scores[i] >= 0.5:
+                if label_scores[i] >= 0.25:
                     # grab the bounding box regression and update the coordinates
                     x_start_pred, y_start_pred, x_end_pred, y_end_pred = locs[i]
                     w_pred, h_pred = x_end_pred - x_start_pred, y_end_pred - y_start_pred
@@ -114,15 +107,16 @@ def main(map_out_path, model_path, weights_path):
                 boxes = np.array([p[0] for p in labels[label]])
                 proba = np.array([p[1] for p in labels[label]])
                 # non-maxima suppression
-                boxes_ids = non_max_suppression(boxes, overlapThresh=0.1)
+                boxes_ids = non_max_suppression(boxes, overlapThresh=0.6)
+                # boxes_ids = cpu_soft_nms(boxes, proba, Nt=0.3)
                 for boxes_id in boxes_ids:
                     box = boxes[boxes_id]
                     score = proba[boxes_id]
                     left, top, right, bottom = box
                     top = max(0, np.floor(top).astype('int32'))
                     left = max(0, np.floor(left).astype('int32'))
-                    bottom = min(input_size[1], np.floor(bottom).astype('int32'))
-                    right = min(input_size[0], np.floor(right).astype('int32'))
+                    bottom = min(input_image.size[1], np.floor(bottom).astype('int32'))
+                    right = min(input_image.size[0], np.floor(right).astype('int32'))
                     f.write("%s %s %s %s %s %s\n" % (label, score,
                                                      str(int(left)), str(int(top)), str(int(right)), str(int(bottom))))
             f.close()
@@ -160,23 +154,48 @@ def main(map_out_path, model_path, weights_path):
 
 
 if __name__ == '__main__':
-    # b_map_out_path = './vgg16_cifar100_fpl_tf2/logs_ss_voc'
-    # b_model_path = './vgg16_cifar100_fpl_tf2/logs_ss_voc'
-    # b_weights_path = './vgg16_cifar100_fpl_tf2/logs_ss_voc'
-    b_map_out_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_voc'
-    b_model_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_voc'
-    b_weights_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_voc'
-    for i in range(15):
-        mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result_new'])
+    # b_map_out_path = './sgd_tf2_ndn_best/logs_ipsw_morefc'
+    # b_model_path = './sgd_tf2_ndn_best/logs_ipsw_morefc'
+    # b_weights_path = './sgd_tf2/logs_ipsw_morefc'
+    # mn = ['sgd_vgg11_cifar10', 'sgd_vgg11_cifar100', 'sgd_vgg16_cifar10', 'sgd_vgg16_cifar100']
+    # for i in range(4):
+    #     mop = os.path.sep.join([b_map_out_path, mn[i], 'map_result'])
+    #     mp = os.path.sep.join([b_map_out_path, mn[i], 'ipsw_' + mn[i] + '.json'])
+    #     wp = os.path.sep.join([b_map_out_path, mn[i], 'ipsw_' + mn[i] + '.h5'])
+    #     main(mop, mp, wp)
+    #
+    # b_map_out_path = './vgg11_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # b_model_path = './vgg11_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # b_weights_path = './vgg11_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # for i in range(8, 10):
+    #     mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result'])
+    #     mp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg11_cifar10_w' + str(i + 1) + '_fpl.json'])
+    #     wp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg11_cifar10_w' + str(i + 1) + '_fpl.h5'])
+    #     main(mop, mp, wp)
+    #
+    # b_map_out_path = './vgg11_cifar100_fpl_tf2/logs_ipsw_morefc'
+    # b_model_path = './vgg11_cifar100_fpl_tf2/logs_ipsw_morefc'
+    # b_weights_path = './vgg11_cifar100_fpl_tf2/logs_ipsw_morefc'
+    # for i in range(8, 10):
+    #     mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result'])
+    #     mp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg11_cifar100_w' + str(i + 1) + '_fpl.json'])
+    #     wp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg11_cifar100_w' + str(i + 1) + '_fpl.h5'])
+    #     main(mop, mp, wp)
+    #
+    # b_map_out_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # b_model_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # b_weights_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_morefc'
+    # for i in range(13, 15):
+    #     mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result'])
+    #     mp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar10_w' + str(i + 1) + '_fpl.json'])
+    #     wp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar10_w' + str(i + 1) + '_fpl.h5'])
+    #     main(mop, mp, wp)
+
+    b_map_out_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_morefc_coco'
+    b_model_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_morefc_coco'
+    b_weights_path = './vgg16_cifar100_fpl_tf2/logs_ipsw_morefc_coco'
+    for i in range(1):
+        mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result'])
         mp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar100_w' + str(i + 1) + '_fpl.json'])
         wp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar100_w' + str(i + 1) + '_fpl.h5'])
-        main(mop, mp, wp)
-
-    b_map_out_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_voc'
-    b_model_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_voc'
-    b_weights_path = './vgg16_cifar10_fpl_tf2/logs_ipsw_voc'
-    for i in range(15):
-        mop = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'map_result_new'])
-        mp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar10_w' + str(i + 1) + '_fpl.json'])
-        wp = os.path.sep.join([b_map_out_path, 'w' + str(i + 1), 'ipsw_vgg16_cifar10_w' + str(i + 1) + '_fpl.h5'])
         main(mop, mp, wp)

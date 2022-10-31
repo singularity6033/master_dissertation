@@ -23,7 +23,7 @@ class faster_rcnn(object):
         "out_channel": 512,
         "classes_path": os.path.join(config.VOC_ORIG_BASE_PATH, 'voc_classes.txt'),
         "confidence": 0.01,
-        "nms_iou": 0.01,
+        "nms_iou": 0.6,
         'anchors_size': [64, 128, 256],
     }
 
@@ -49,7 +49,7 @@ class faster_rcnn(object):
         hsv_tuples = [(x / self.num_classes, 1., 1.) for x in range(self.num_classes)]
         self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
         self.colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), self.colors))
-        self.model_rpn, self.model_classifier =\
+        self.model_rpn, self.model_classifier = \
             frcnn.get_predict_model(self.model_path, self.num_classes, self.chop_idx, self.out_channel)
         self.generate()
 
@@ -60,7 +60,7 @@ class faster_rcnn(object):
         # load weights
         self.model_rpn.load_weights(self.weights_path, by_name=True)
         self.model_classifier.load_weights(self.weights_path, by_name=True)
-        print('{} model, anchors, and classes loaded.'.format(self.weights_path))
+        # print('{} model, anchors, and classes loaded.'.format(self.weights_path))
 
     def detect_image(self, image):
         image_shape = np.array(np.shape(image)[0:2])
@@ -73,7 +73,7 @@ class faster_rcnn(object):
         rpn_pred = self.model_rpn(image_data)
         rpn_pred = [x.numpy() for x in rpn_pred]
 
-        anchors = get_anchors(input_shape, self.anchors_size)
+        anchors = get_anchors(input_shape, self.anchors_size, self.stride)
         rpn_results = self.bbox_util.detection_out_rpn(rpn_pred, anchors)
 
         classifier_pred = self.model_classifier([rpn_pred[2], rpn_results[:, :, [1, 0, 3, 2]]])
@@ -111,7 +111,7 @@ class faster_rcnn(object):
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
             label = label.encode('utf-8')
-            print(label, top, left, bottom, right)
+            # print(label, top, left, bottom, right)
 
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])

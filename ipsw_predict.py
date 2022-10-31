@@ -37,7 +37,7 @@ hsv_tuples = [(x / num_classes, 1., 1.) for x in range(num_classes)]
 colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
 colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
 input_shape = [32, 32]
-roi_sizes = [[150, 100], [150, 150], [100, 150]]
+roi_sizes = [[150, 150]]
 
 
 def ipsw_detect_image(input_img, model_path, weights_path, class_list=class_names, color_list=None):
@@ -49,8 +49,7 @@ def ipsw_detect_image(input_img, model_path, weights_path, class_list=class_name
     thickness = max((np.shape(input_img)[0] + np.shape(input_img)[1]) // 300, 1)
     # generate rois for prediction
     if method == 'ipsw':
-        rois, locs = ipsw_dataset_generator(input_shape=input_shape, scale=1.5, win_step=16,
-                                            roi_sizes=roi_sizes,
+        rois, locs = ipsw_dataset_generator(input_shape=input_shape, scale=1.5, win_step=16, roi_sizes=roi_sizes,
                                             train=False).test_generator(input_img)
     elif method == 'ss':
         rois, locs = ss_dataset_generator(input_shape=input_shape, category=class_names, dataset_name='voc',
@@ -70,7 +69,7 @@ def ipsw_detect_image(input_img, model_path, weights_path, class_list=class_name
     for i in range(num_pred):
         # filter out weak detections by ensuring the predicted probability
         # is greater than the minimum probability
-        if label_scores[i] >= 0.5:
+        if label_scores[i] >= 0.25:
             # grab the bounding box regression and update the coordinates
             x_start_pred, y_start_pred, x_end_pred, y_end_pred = locs[i]
             w_pred, h_pred = x_end_pred - x_start_pred, y_end_pred - y_start_pred
@@ -89,7 +88,7 @@ def ipsw_detect_image(input_img, model_path, weights_path, class_list=class_name
     for label in labels.keys():
         boxes = np.array([p[0] for p in labels[label]])
         proba = np.array([p[1] for p in labels[label]])
-        boxes_ids = non_max_suppression(boxes, overlapThresh=0.1)
+        boxes_ids = non_max_suppression(boxes, overlapThresh=0.6)
         for boxes_id in boxes_ids:
             predicted_class = label
             box = boxes[boxes_id]

@@ -88,7 +88,6 @@ def VGG16(inputs):
 
 
 def vgg_classifier_layers(x):
-    # num_rois, 14, 14, 1024 -> num_rois, 7, 7, 2048
     x = TimeDistributed(Flatten(name='flatten'))(x)
     x = TimeDistributed(Dense(512, activation='relu'), name='fc1')(x)
     x = TimeDistributed(Dense(512, activation='relu'), name='fc2')(x)

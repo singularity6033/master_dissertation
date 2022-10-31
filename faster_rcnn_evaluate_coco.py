@@ -33,7 +33,7 @@ MINOVERLAP = 0.25
 # visualization of map calculations
 map_vis = False
 # map result dir
-map_out_path = './logs_faster_rcnn/vgg11_w10/map_result'
+map_out_path = './logs/fr_w10/map_result'
 
 if not os.path.exists(map_out_path):
     os.makedirs(map_out_path)

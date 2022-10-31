@@ -1,4 +1,4 @@
-from utils.change_nn_input_size import change_input_size
+from utils.change_cnn_input_size import change_input_size
 from tensorflow.keras.models import model_from_json
 from nets.classifier import get_vgg_classifier
 from tensorflow.keras.layers import Input

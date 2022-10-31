@@ -5,6 +5,7 @@ from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.layers import Dense, Flatten, Layer, TimeDistributed
 
 
+# define roi pooling layer based on keras.Layer
 class RoiPoolingConv(Layer):
     def __init__(self, pool_size, **kwargs):
         self.pool_size = pool_size
@@ -38,18 +39,16 @@ class RoiPoolingConv(Layer):
 
 
 def get_vgg_classifier(base_layers, input_rois, roi_size, num_classes):
-    # batch_size, 37, 37, 512 -> batch_size, num_rois, 7, 7, 512
+    # batch_size, feature_map_width, feature_map_height, 512 -> batch_size, num_rois, 7, 7, 512
     out_roi_pool = RoiPoolingConv(roi_size)([base_layers, input_rois])
-
     # batch_size, num_rois, 7, 7, 512 -> batch_size, num_rois, 4096
     out_layer = vgg_classifier_layers(out_roi_pool)
-
     # batch_size, num_rois, 4096 -> batch_size, num_rois, num_classes
     out_classification = TimeDistributed(Dense(num_classes, activation='softmax',
-                                         kernel_initializer=RandomNormal(stddev=0.02)),
+                                               kernel_initializer=RandomNormal(stddev=0.02)),
                                          name='dense_class_{}'.format(num_classes))(out_layer)
     # batch_size, num_rois, 4096 -> batch_size, num_rois, 4 * (num_classes-1)
     out_regression = TimeDistributed(Dense(4 * (num_classes - 1), activation='linear',
-                                     kernel_initializer=RandomNormal(stddev=0.02)),
+                                           kernel_initializer=RandomNormal(stddev=0.02)),
                                      name='dense_regress_{}'.format(num_classes))(out_layer)
     return [out_classification, out_regression]
