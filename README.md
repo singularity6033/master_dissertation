@@ -4,3 +4,4 @@ detection metrics but have less trainable parameters in the pre-training stage t
 
 #### the environment is tensorflow-gpu==2.2.0
 #### FPL related code can be found in htps://github.com/singularity6033/fpl
+#### the code to convert pytorch weights to tensorflow weights can be found in https://github.com/singularity6033/convert_pytorch_to_tensorflow/tree/master
