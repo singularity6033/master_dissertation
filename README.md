@@ -3,5 +3,9 @@ Recently, the layer-wise learning has been well developed into an alternative tr
 detection metrics but have less trainable parameters in the pre-training stage than those counterparts with the SGD method. Moreover, we also compared our proposed IPSW with other popular types of object detection architecture, such as R-CNN and faster R-CNN. It can be proven that our proposed IPSW is a more suitable option for the evaluation of transfer learning abilities of pretrained models with FPL method in the object detection field.
 
 #### the environment is tensorflow-gpu==2.2.0
-#### FPL related code can be found in (htps://github.com/singularity6033/fpl)
-#### the code to convert pytorch weights to tensorflow weights can be found in (https://github.com/singularity6033/convert_pytorch_to_tensorflow/tree/master)
+
+
+#### FPL related code can be found in htps://github.com/singularity6033/fpl
+
+
+#### the code to convert pytorch weights to tensorflow weights can be found in https://github.com/singularity6033/convert_pytorch_to_tensorflow/tree/master
